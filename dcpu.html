@@ -1,0 +1,60 @@
+<html>
+  <head>
+    <script type="text/javascript" src="./dcpu.js"></script>
+  </head>
+  <body>
+    <h1>dcpu16 javascript emulator</h1>
+    <a href="http://0x10c.com/doc/dcpu-16.txt">dcpu spec</a>
+    <br/>
+    <a href="https://github.com/swetland/dcpu16">javascript emulator based on swetland's dcpu16 c emulator</a>
+    <p/>
+    <div id="container">
+      <p/>
+      <p/>
+      <div id="hex" style="position:relative; float:left;">
+	Hex program. One word per line.
+	<br/>
+	<button onClick="javascript:main();return false;" value="go" >GO</button>
+	<br/>
+	<textarea id="hexbin" rows=80 cols=30>7c01
+0030
+7de1
+1000
+0020
+7803
+1000
+c00d
+7dc1
+001a
+a861
+7c01
+2000
+2161
+2000
+8463
+806d
+7dc1
+000d
+9031
+7c10
+0018
+7dc1
+001a
+9037
+61c1
+7dc1
+FFF0
+0000
+0000
+0000
+0000
+</textarea>
+    </div>
+    <div id="c" style="position:relative; float:left;">
+      Console:
+      </br>
+      <pre id="console"></pre>
+    </div>
+  </body>
+</html>
+
