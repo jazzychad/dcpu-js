@@ -30,6 +30,7 @@ var _log = function(msg) {
     var s = c.innerText;
     s = s + msg + "\n";
     c.innerText = s;
+    c.scrollTop = c.scrollHeight;
   }
 };
 
@@ -292,47 +293,42 @@ var load = function(d, data) {
 };
 
 var main = function() {
-  var hexbin = document.getElementById("hexbin");
-
-  var c = document.getElementById("console");
-  if (c) {
-    c.innerText = "";
-  }
-
-  var d = new dcpu();
-
-  d.reset();
-  d.data[d.sp] = 0xffff;
-
-  load(d, hexbin.value);
-
-  _log(dumpheader());
-  while (true) {
-    _log(dumpstate(d));
-    dcpu_step(d);
-  }
+  running = true;
+  steploop(d);
 
 };
 
+var steploop = function(d) {
+  if (running) {
+    _log(dumpstate(d));
+    dcpu_step(d);
+    setTimeout(function() {steploop(d);}, 10);
+  }
+};
 
-var dd = new dcpu();
 
 function reset() {
-  dd.reset();
-  dd.data[dd.sp] = 0xffff;
-  var hexbin = document.getElementById("hexbin");
+  d.reset();
+  d.data[d.sp] = 0xffff;
   var c = document.getElementById("console");
   if (c) {
     c.innerText = "";
   }
-  load(dd, hexbin.value);
   _log(dumpheader());
-  _log(dumpstate(dd));
+  _log(dumpstate(d));
 
 }
+
+function hexload() {
+  var hexbin = document.getElementById("hexbin");
+  load(d, hexbin.value);
+};
 
 function step() {
-  dcpu_step(dd);
-  _log(dumpstate(dd));
+  dcpu_step(d);
+  _log(dumpstate(d));
 
 }
+
+var d = new dcpu();
+var running = false;

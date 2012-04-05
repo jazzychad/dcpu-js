@@ -14,9 +14,14 @@
       <div id="hex" style="position:relative; float:left;">
 	Hex program. One word per line.
 	<br/>
-	<button onClick="javascript:main();return false;" value="go" >GO</button>
+	<button onClick="javascript:reset(); return false;" value="stop" >RESET</button>
+	<button onClick="javascript:hexload(); return false;" value="stop" >LOAD</button>
 	<br/>
-	<textarea id="hexbin" rows=80 cols=30>7c01
+	<button onClick="javascript:main();return false;" value="go" >RUN</button>
+	<button onClick="javascript:running=false; return false;" value="stop" >STOP</button>
+	<button onClick="javascript:step();; return false;" value="stop" >STEP</button>
+	<br/>
+	<textarea id="hexbin" rows=80 cols=40>7c01
 0030
 7de1
 1000
@@ -53,7 +58,7 @@ FFF0
     <div id="c" style="position:relative; float:left;">
       Console:
       </br>
-      <pre id="console"></pre>
+      <pre id="console" style="height:400px; width:700px; overflow:auto;"></pre>
     </div>
   </body>
 </html>
