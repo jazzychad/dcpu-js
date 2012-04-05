@@ -1,5 +1,8 @@
 A javascript emulator of the DCPU-16
 
+DCPU-16 spec:
+http://0x10c.com/doc/dcpu-16.txt
+
 Initially ported from swetland's c emulator:
 https://github.com/swetland/dcpu16
 
