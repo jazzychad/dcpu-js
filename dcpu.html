@@ -16,6 +16,14 @@
       <p/>
       <p/>
       <div id="hex" style="position:relative; float:left;">
+	Assembly
+	<br/>
+	<button onClick="javascript:assemble(); return false;" value="assemble" >ASSEMBLE</button>
+	<button onClick="javascript:assemble();reset();hexload(); return false" value="asm,rst,load">ASM, RST, LOAD</button>
+	<br/>
+	<textarea id="assembly" rows=80 cols=30></textarea>
+      </div>
+      <div id="hex" style="position:relative; float:left;">
 	Hex program. One word per line.
 	<br/>
 	<button onClick="javascript:reset(); return false;" value="stop" >RESET</button>
@@ -76,6 +84,7 @@ FFF0
       <pre id="console"></pre>
     </div>
     <script type="text/javascript" src="./dcpu.js"></script>
+    <script type="text/javascript" src="./assembler.js"></script>
   </body>
 </html>
 

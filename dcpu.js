@@ -456,6 +456,17 @@ function step() {
 
 }
 
+function assemble() {
+  var asm = document.getElementById("assembly").value;
+  var a = new Assembler(null);
+  var mem = a.compile(a.clean(asm));
+  var s = "";
+  for (var i = 0; i < mem.length; i++) {
+    s += hex(mem[i]) + "\n";
+  }
+  document.getElementById("hexbin").value = s;
+}
+
 var d = new dcpu();
 var running = false;
 var stepnum = 0;
