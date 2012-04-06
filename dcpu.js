@@ -282,7 +282,6 @@ var dcpu_step = function(d) {
   if (dst < 0x1f) {
     d.data[pa] = res & 0xffff;
     if (pa >= d.video_start && pa <= d.video_start + d.video_size) {
-      console.log('h');
       dcpu_print(d);
     }
   }
@@ -373,7 +372,6 @@ var dumpstate = function() {
   var i = 0;
   return function(d) {
     ++i;
-    console.log("i: " + i);
     if (!(i % 20)) {
       _trace(dumpheader());
     }
