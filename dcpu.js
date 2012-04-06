@@ -21,11 +21,11 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-var _log = function(msg) {
-  if (window.console && window.console.log) {
-    console.log(msg);
-  }
-  var c = document.getElementById("console");
+var _trace = function(msg) {
+  //if (window.console && window.console.log) {
+  //  console.log(msg);
+  //}
+  var c = document.getElementById("trace");
   if (c) {
     var s = c.innerText;
     s = s + msg + "\n";
@@ -33,9 +33,57 @@ var _log = function(msg) {
     c.scrollTop = c.scrollHeight;
   }
 };
+var _ramlog = function(msg) {
+  var c = document.getElementById("ramconsole");
+  if (c) {
+    c.innerHTML = msg;
+  }
+};
+var _console = function(msg) {
+  var c = document.getElementById("console");
+  if (c) {
+    c.innerHTML = msg;
+  }
+};
+
+var skiptable = [
+0, //0x00
+0, //0x01
+0, //0x02
+0, //0x03
+0, //0x04
+0, //0x05
+0, //0x06
+0, //0x07
+0, //0x08
+0, //0x09
+0, //0x0a
+0, //0x0b
+0, //0x0c
+0, //0x0d
+0, //0x0e
+0, //0x0f
+1, //0x10
+1, //0x11
+1, //0x12
+1, //0x13
+1, //0x14
+1, //0x15
+1, //0x16
+1, //0x17
+0, //0x18
+0, //0x19
+0, //0x1a
+0, //0x1b
+0, //0x1c
+0, //0x1d
+1, //0x1e
+1  //0x1f
+];
 
 var dcpu = function() {
-  var size = 0x10000 + 8 + 1 + 1 + 1 + 1 + 32;
+  this.ramsize = 0x10000;
+  var size = this.ramsize + 8 + 1 + 1 + 1 + 1 + 32;
   var litarr = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
 		0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
 		0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
@@ -47,9 +95,12 @@ var dcpu = function() {
   this.pc = this.r + 8;
   this.sp = this.pc + 1;
   this.ov = this.sp + 1;
-  this.skip = this.ov + 1;
-  this.lit = this.skip + 1;
+  this.unused = this.ov + 1;
+  this.lit = this.unused + 1;
   this.m = this.lit + litarr.length;
+
+  this.video_start = this.m + 0x8000;
+  this.video_size = 0x400; // 32x32 = 1024
 
   this.reset = function() {
     for (var i = 0; i < size; i++) {
@@ -67,6 +118,13 @@ var dcpu = function() {
 
 };
 
+var dcpu_skip = function(d) {
+  var op = d.data[d.m + d.data[d.pc]++];
+  d.data[d.pc] += skiptable[(op >> 10) & 0xffff];
+  if ((op & 15) == 0) {
+    d.data[d.pc] += skiptable[(op >> 4) & 31];
+  }
+};
 
 var dcpu_opr = function(d, code) {
   switch(code) {
@@ -125,26 +183,21 @@ var dcpu_step = function(d) {
   op = d.data[d.m + d.data[d.pc]++];
 
   if ((op & 0xf) == 0) { // non-basic instr
+    pa = dcpu_opr(d, op >> 10);
+    a = d.data[pa];
     switch ((op >> 4) & 0x3f) {
     case 0x01:
-      pa = dcpu_opr(d, op >> 10);
-      a = d.data[pa];
-      if (d.data[d.skip]) {
-	d.data[d.skip] = 0;
-      } else {
-	d.data[d.sp]--;
-	d.data[d.m + d.data[d.sp]] = d.data[d.pc];
-	d.data[d.pc] = a;
-      }
+      d.data[d.sp]--;
+      d.data[d.m + d.data[d.sp]] = d.data[d.pc];
+      d.data[d.pc] = a;
       return;
     default:
-      _log("< ILLEGAL OPCODE > ");
-      throw "ILLEGAL OPCODE " + op.toString(16);
+      _trace("< ILLEGAL OPCODE > ");
+      throw "ILLEGAL OPCODE 0x" + op.toString(16);
     }
   }
 
   dst = (op >> 4) & 0x3f;
-
   pa = dcpu_opr(d, dst);
   a = d.data[pa];
   pb = dcpu_opr(d, (op >> 10) & 0x3f);
@@ -157,14 +210,17 @@ var dcpu_step = function(d) {
 
   case 0x2: // ADD a, b
     res = a + b;
+    d.data[d.ov] = (res >> 16) & 0xffff;
     break;
 
   case 0x3: // SUB a, b
     res = a - b;
+    d.data[d.ov] = (res >> 16) & 0xffff;
     break;
 
   case 0x4: // MUL a, b
     res = a * b;
+    d.data[d.ov] = (res >> 16) & 0xffff;
     break;
 
   case 0x5: // DIV a, b
@@ -173,6 +229,7 @@ var dcpu_step = function(d) {
     } else {
       res = 0;
     }
+    d.data[d.ov] = (res >> 16) & 0xffff;
     break;
 
   case 0x6: // MOD a, b
@@ -185,10 +242,12 @@ var dcpu_step = function(d) {
 
   case 0x7: // SHL a, b
     res = (a << b) & 0xffffffff;
+    d.data[d.ov] = (res >> 16) & 0xffff;
     break;
 
   case 0x8: // SHR a, b
     res = (a >> b) & 0xffffffff;
+    d.data[d.ov] = (res >> 16) & 0xffff;
     break;
 
   case 0x9: // AND
@@ -204,52 +263,105 @@ var dcpu_step = function(d) {
     break;
 
   case 0xc: // IFE
-    res = (a == b) ? 1 : 0;
-    cond = true;
-    break;
+    if (a != b) dcpu_skip(d);
+    return;
 
   case 0xd: // IFN
-    res = (a != b) ? 1 : 0;
-    cond = true;
-    break;
+    if (a == b) dcpu_skip(d);
+    return;
 
   case 0xe: // IFG
-    res = (a > b) ? 1 : 0;
-    cond = true;
-    break;
+    if (a <= b) dcpu_skip(d);
+    return;
 
   case 0xf: // IFB
-    res = ((a & b) != 0) ? 1 : 0;
-    cond = true;
-    break;
-  }
-
-  if (cond) {
-    if (d.data[d.skip]) {
-      d.data[d.skip] = 0;
-      return;
-    }
-    d.data[d.skip] = res == 0 ? 1 : 0;
-    return;
-  }
-
-  if (d.data[d.skip]) {
-    d.data[d.skip] = 0;
+    if ((a & b) == 0) dcpu_skip(d);
     return;
   }
 
   if (dst < 0x1f) {
     d.data[pa] = res & 0xffff;
-    d.data[d.ov] = (res >> 16) & 0xffff;
+    if (pa >= d.video_start && pa <= d.video_start + d.video_size) {
+      console.log('h');
+      dcpu_print(d);
+    }
   }
 };
 
+var dcpu_print = function(d) {
+  var s = "";
+  var i, _end, word;
+  var j = 0;
+  for (i = d.video_start, _end = d.video_start + d.video_size; i < _end; i++) {
+    word = d.data[i];
+    s += (word && 0xff) ? String.fromCharCode(word & 0xff) : ".";
+    j++;
+    if (!(j % 32)) {
+      s += "\n";
+    }
+  }
+  _console(s);
+};
+
+var dumpram = function(d) {
+  var out = "";
+  out += "= REGISTERS: =\n" +
+    "A:  " + hex(d.data[d.r + 0]) + "\n" +
+    "B:  " + hex(d.data[d.r + 1]) + "\n" +
+    "C:  " + hex(d.data[d.r + 2]) + "\n" +
+    "X:  " + hex(d.data[d.r + 3]) + "\n" +
+    "Y:  " + hex(d.data[d.r + 4]) + "\n" +
+    "Z:  " + hex(d.data[d.r + 5]) + "\n" +
+    "I:  " + hex(d.data[d.r + 6]) + "\n" +
+    "J:  " + hex(d.data[d.r + 7]) + "\n" +
+    "\n" +
+    "PC: [" + hex(d.data[d.pc]) + "]\n" +
+    "SP: *" + hex(d.data[d.sp]) + "*\n" +
+    "OV:  " + hex(d.data[d.ov]) + "\n\n";
+
+  out += "STEP: " + stepnum + "\n\n";
+
+  out += "= RAM: =\n";
+
+  var pop = false;
+  var i, j, c, e;
+  for (i = 0; i < d.ramsize; i += 8) {
+    pop = false;
+    for (j = 0; j < 8; j++) {
+      if (d.data[d.m + i + j] || d.data[d.pc] == i + j || d.data[d.sp] == i + j) {
+	pop = true;
+	break;
+      }
+    }
+
+    if (pop) {
+      out += "\n" + hex(i) + ": ";
+      c = "";
+      e = "";
+
+      for (j = 0; j < 8; j++) {
+	if (d.data[d.pc] === i + j) {c = "["; e = "]";}
+	//else if (d.data[d.pc] === i + j - 1) out += "]";
+	else if (d.data[d.sp] === i + j) {c = "*"; e = "*";}
+	//else if (d.data[d.sp] === i + j - 1) out += "*";
+	else {c = " "; e = " ";}
+
+	out += c;
+	out += hex(d.data[d.m + i + j]);
+	out += e + " ";
+      }
+    }
+  }
+  return out;
+};
+
 var dumpheader = function() {
-  return "PC   SP   OV   SKIP A    B    C    X    Y    Z    I    J\n" +
-    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----";
+  return "PC   SP   OV   A    B    C    X    Y    Z    I    J\n" +
+    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----";
 };
 
 var hex = function(num, len) {
+  if (len == undefined) len = 4;
   var s = num.toString(16);
   while (s.length < len) {
     s = "0" + s;
@@ -257,39 +369,49 @@ var hex = function(num, len) {
   return s;
 };
 
-var dumpstate = function(d) {
-  return hex(d.data[d.pc], 4) +
-    " " +
-    hex(d.data[d.sp], 4) +
-    " " +
-    hex(d.data[d.ov], 4) +
-    " " +
-    hex(d.data[d.skip], 4) +
-    " " +
-    hex(d.data[d.r + 0], 4) +
-    " " +
-    hex(d.data[d.r + 1], 4) +
-    " " +
-    hex(d.data[d.r + 2], 4) +
-    " " +
-    hex(d.data[d.r + 3], 4) +
-    " " +
-    hex(d.data[d.r + 4], 4) +
-    " " +
-    hex(d.data[d.r + 5], 4) +
-    " " +
-    hex(d.data[d.r + 6], 4) +
-    " " +
-    hex(d.data[d.r + 7], 4);
-};
+var dumpstate = function() {
+  var i = 0;
+  return function(d) {
+    ++i;
+    console.log("i: " + i);
+    if (!(i % 20)) {
+      _trace(dumpheader());
+    }
+    return hex(d.data[d.pc], 4) +
+      " " +
+      hex(d.data[d.sp], 4) +
+      " " +
+      hex(d.data[d.ov], 4) +
+      " " +
+      hex(d.data[d.r + 0], 4) +
+      " " +
+      hex(d.data[d.r + 1], 4) +
+      " " +
+      hex(d.data[d.r + 2], 4) +
+      " " +
+      hex(d.data[d.r + 3], 4) +
+      " " +
+      hex(d.data[d.r + 4], 4) +
+      " " +
+      hex(d.data[d.r + 5], 4) +
+      " " +
+      hex(d.data[d.r + 6], 4) +
+      " " +
+      hex(d.data[d.r + 7], 4);
+  };
+}();
 
 var load = function(d, data) {
   var lines = data.split("\n");
   for (var i = 0; i < lines.length; i++) {
     var chunks = lines[i].split(" ");
     d.data[d.m + i] = parseInt(chunks[0], 16);
+    if (isNaN(d.data[d.m + i])) {
+      d.data[d.m + i] = 0;
+    }
   }
-  _log("< LOADED " + i + " WORDS >");
+  _trace("< LOADED " + i + " WORDS >");
+  _ramlog(dumpram(d));
 };
 
 var main = function() {
@@ -300,23 +422,27 @@ var main = function() {
 
 var steploop = function(d) {
   if (running) {
-    _log(dumpstate(d));
+    _trace(dumpstate(d));
+    _ramlog(dumpram(d));
     dcpu_step(d);
+    stepnum++;
     setTimeout(function() {steploop(d);}, 10);
   }
 };
 
 
 function reset() {
+  stepnum = 0;
   d.reset();
   d.data[d.sp] = 0xffff;
   var c = document.getElementById("console");
   if (c) {
     c.innerText = "";
   }
-  _log(dumpheader());
-  _log(dumpstate(d));
-
+  _trace(dumpheader());
+  _trace(dumpstate(d));
+  _ramlog(dumpram(d));
+  dcpu_print(d);
 }
 
 function hexload() {
@@ -326,9 +452,15 @@ function hexload() {
 
 function step() {
   dcpu_step(d);
-  _log(dumpstate(d));
+  _trace(dumpstate(d));
+  _ramlog(dumpram(d));
+  stepnum++;
 
 }
 
 var d = new dcpu();
 var running = false;
+var stepnum = 0;
+
+reset();
+hexload();

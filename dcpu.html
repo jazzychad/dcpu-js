@@ -1,6 +1,6 @@
 <html>
   <head>
-    <script type="text/javascript" src="./dcpu.js"></script>
+    <title>dcpu javascript emulator</title>
   </head>
   <body>
     <h1>dcpu16 javascript emulator</h1>
@@ -59,11 +59,23 @@ FFF0
 0000
 </textarea>
     </div>
-    <div id="c" style="position:relative; float:left;">
-      Console:
+    <div id="t" style="position:relative; float:left;">
+      Registers/RAM:
+      <br/>
+      <pre id="ramconsole" style="height:auto; width:600px; margin-bottom:10px;"></pre>
+      <hr/>
+      Trace:
       </br>
-      <pre id="console" style="height:400px; width:700px; overflow:auto;"></pre>
+      <button onClick="javascript:document.getElementById('trace').innerText='';">Clear</button>
+      <br/>
+      <pre id="trace" style="height:400px; width:600px; overflow:auto;"></pre>
     </div>
+    <div id="c" style="position:relative; width:100px; float:left; margin-left: 20px;">
+      Console (32x32):
+      <br/>
+      <pre id="console"></pre>
+    </div>
+    <script type="text/javascript" src="./dcpu.js"></script>
   </body>
 </html>
 
