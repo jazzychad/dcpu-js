@@ -21,22 +21,17 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-var _trace = function(msg) {
-  //if (window.console && window.console.log) {
-  //  console.log(msg);
-  //}
-  var c = document.getElementById("trace");
-  if (c) {
-    var s = c.innerText;
+var _trace = function(msg, override) {
+  if (entrace.checked || override) {
+    var s = tracediv.innerText;
     s = s + msg + "\n";
-    c.innerText = s;
-    c.scrollTop = c.scrollHeight;
+    tracediv.innerText = s;
+    tracediv.scrollTop = tracediv.scrollHeight;
   }
 };
 var _ramlog = function(msg) {
-  var c = document.getElementById("ramconsole");
-  if (c) {
-    c.innerHTML = msg;
+  if (enramcon.checked) {
+    ramcondiv.innerHTML = msg;
   }
 };
 var _console = function(msg) {
@@ -80,6 +75,9 @@ var skiptable = [
 1, //0x1e
 1  //0x1f
 ];
+for (var skipi = 0x20; skipi<0x40; skipi++) {
+  skiptable[skipi] = 0;
+}
 
 var dcpu = function() {
   this.ramsize = 0x10000;
@@ -100,7 +98,7 @@ var dcpu = function() {
   this.m = this.lit + litarr.length;
 
   this.video_start = this.m + 0x8000;
-  this.video_size = 0x400; // 32x32 = 1024
+  this.video_size = 0x200; // 32x16 = 512 words (1024 bytes)
 
   this.reset = function() {
     for (var i = 0; i < size; i++) {
@@ -120,7 +118,7 @@ var dcpu = function() {
 
 var dcpu_skip = function(d) {
   var op = d.data[d.m + d.data[d.pc]++];
-  d.data[d.pc] += skiptable[(op >> 10) & 0xffff];
+  d.data[d.pc] += skiptable[(op >> 10) & 0x3f];
   if ((op & 15) == 0) {
     d.data[d.pc] += skiptable[(op >> 4) & 31];
   }
@@ -177,7 +175,6 @@ var dcpu_step = function(d) {
   var dst;
   var res;
   var a, b, pa, pb;
-  var cond = false;
 
   //d.data[d.pc]++;
   op = d.data[d.m + d.data[d.pc]++];
@@ -191,8 +188,12 @@ var dcpu_step = function(d) {
       d.data[d.m + d.data[d.sp]] = d.data[d.pc];
       d.data[d.pc] = a;
       return;
+    case 0x02: // BRK - NON STANDARD, NOT IN SPEC
+      _trace("BREAK", true);
+      throw "BREAK";
+      return;
     default:
-      _trace("< ILLEGAL OPCODE > ");
+      _trace("< ILLEGAL OPCODE > ", true);
       throw "ILLEGAL OPCODE 0x" + op.toString(16);
     }
   }
@@ -293,7 +294,7 @@ var dcpu_print = function(d) {
   var j = 0;
   for (i = d.video_start, _end = d.video_start + d.video_size; i < _end; i++) {
     word = d.data[i];
-    s += (word && 0xff) ? String.fromCharCode(word & 0xff) : ".";
+    s += (word && 0xff) ? String.fromCharCode(word & 0xff) : " ";
     j++;
     if (!(j % 32)) {
       s += "\n";
@@ -424,7 +425,7 @@ var steploop = function(d) {
     _ramlog(dumpram(d));
     dcpu_step(d);
     stepnum++;
-    setTimeout(function() {steploop(d);}, 10);
+    setTimeout(function() {steploop(d);}, 0);
   }
 };
 
@@ -459,17 +460,29 @@ function step() {
 function assemble() {
   var asm = document.getElementById("assembly").value;
   var a = new Assembler(null);
-  var mem = a.compile(a.clean(asm));
-  var s = "";
-  for (var i = 0; i < mem.length; i++) {
-    s += hex(mem[i]) + "\n";
+  try {
+    var mem = a.compile(a.clean(asm));
+    var s = "";
+    for (var i = 0; i < mem.length; i++) {
+      s += hex(mem[i]) + "\n";
+    }
+    document.getElementById("hexbin").value = s;
+
+  } catch (e) {
+    document.getElementById("hexbin").value = e;
+    _trace(e, true);
   }
-  document.getElementById("hexbin").value = s;
 }
 
 var d = new dcpu();
 var running = false;
 var stepnum = 0;
+
+var tracediv = document.getElementById("trace");
+var entrace = document.getElementById("entrace");
+
+var ramcondiv = document.getElementById("ramconsole");
+var enramcon = document.getElementById("enramconsole");
 
 reset_cpu();
 hexload();
