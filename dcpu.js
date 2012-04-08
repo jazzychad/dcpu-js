@@ -429,7 +429,7 @@ var steploop = function(d) {
 };
 
 
-function reset() {
+function reset_cpu() {
   stepnum = 0;
   d.reset();
   d.data[d.sp] = 0xffff;
@@ -471,5 +471,5 @@ var d = new dcpu();
 var running = false;
 var stepnum = 0;
 
-reset();
+reset_cpu();
 hexload();

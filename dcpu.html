@@ -19,14 +19,14 @@
 	Assembly
 	<br/>
 	<button onClick="javascript:assemble(); return false;" value="assemble" >ASSEMBLE</button>
-	<button onClick="javascript:assemble();reset();hexload(); return false" value="asm,rst,load">ASM, RST, LOAD</button>
+	<button onClick="javascript:assemble();reset_cpu();hexload(); return false" value="asm,rst,load">ASM, RST, LOAD</button>
 	<br/>
 	<textarea id="assembly" rows=80 cols=30></textarea>
       </div>
       <div id="hex" style="position:relative; float:left;">
 	Hex program. One word per line.
 	<br/>
-	<button onClick="javascript:reset(); return false;" value="stop" >RESET</button>
+	<button onClick="javascript:reset_cpu(); return false;" value="stop" >RESET</button>
 	<button onClick="javascript:hexload(); return false;" value="stop" >LOAD</button>
 	<br/>
 	<button onClick="javascript:main();return false;" value="go" >RUN</button>
