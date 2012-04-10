@@ -198,13 +198,13 @@ var Assembler =
               var reg, offset;
               if (isRegister(args[0])) {
                 reg = args[0];
-                offset = parseInt(args[1])
+                offset = parseInt(args[1].trim())
               } else if (isRegister(args[1])) {
                 reg = args[1]
-                offset = parseInt(args[0]);
+                offset = parseInt(args[0].trim());
               }
-                
-	      switch (reg.toLowerCase()) {
+
+	      switch (reg.trim().toLowerCase()) {
 	      case 'a':
 	        pack(0x10);
 	        break;
@@ -410,18 +410,28 @@ var Assembler =
 		       && (line.charAt(j-1) !== '\\' || line.charAt(j-2) === '\\')) {
 		      arg = line.substring(i, j+1);
 		      i = j + 1;
+                      break;
 		    }
 		  }
 		  if(!arg) throw new Error('Unterminated string literal');
+                } else if (line.charAt(i) === '[') {
+		  for(j = i + 1; j < line.length; j++) {
+		    if(line.charAt(j) === ']') {
+		      arg = line.substring(i, j+1);
+		      i = j + 1;
+                      break;
+		    }
+		  }
+		  if(!arg) throw new Error('Unterminated offset');
 	        } else {
                   arg = getToken(line.substr(i));
+                  i += arg.length;
                 }
 
                 if(arg.charAt(arg.length - 1) === ',') {
                   arg = arg.substr(0, arg.length - 1);
                   i++;
                 }
-                i += arg.length;
 
                 args.push(arg);
 
